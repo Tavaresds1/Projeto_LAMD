@@ -1,0 +1,410 @@
+{
+  "info": {
+    "name": "SOS dos Reparos – Sprint 1",
+    "_postman_id": "sos-reparos-sprint1",
+    "description": "Coleção de endpoints da API REST do SOS dos Reparos.\nBackend: Node.js + Express + PostgreSQL\nBase URL: http://localhost:3000",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Healthcheck",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Verifica se a API está no ar."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "GET",
+                "url": { "raw": "{{base_url}}/health" }
+              },
+              "body": "{\n  \"status\": \"ok\",\n  \"servico\": \"SOS dos Reparos API\",\n  \"versao\": \"1.0.0\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Prestadores",
+      "item": [
+        {
+          "name": "Listar prestadores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/prestadores",
+              "host": ["{{base_url}}"],
+              "path": ["prestadores"]
+            },
+            "description": "Retorna todos os prestadores cadastrados."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "GET",
+                "url": { "raw": "{{base_url}}/prestadores" }
+              },
+              "body": "{\n  \"total\": 2,\n  \"dados\": [\n    {\n      \"id\": 1,\n      \"nome\": \"Carlos Encanador\",\n      \"email\": \"carlos@sos.com\",\n      \"telefone\": \"31988880001\",\n      \"especialidade\": \"Desentupimento\",\n      \"disponivel\": true\n    },\n    {\n      \"id\": 2,\n      \"nome\": \"Ana Hidráulica\",\n      \"email\": \"ana@sos.com\",\n      \"telefone\": \"31988880002\",\n      \"especialidade\": \"Instalações Hidráulicas\",\n      \"disponivel\": true\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Buscar prestador por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/prestadores/1",
+              "host": ["{{base_url}}"],
+              "path": ["prestadores", "1"]
+            },
+            "description": "Retorna um prestador específico pelo ID."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "GET",
+                "url": { "raw": "{{base_url}}/prestadores/1" }
+              },
+              "body": "{\n  \"dados\": {\n    \"id\": 1,\n    \"nome\": \"Carlos Encanador\",\n    \"email\": \"carlos@sos.com\",\n    \"telefone\": \"31988880001\",\n    \"especialidade\": \"Desentupimento\",\n    \"disponivel\": true\n  }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "originalRequest": {
+                "method": "GET",
+                "url": { "raw": "{{base_url}}/prestadores/999" }
+              },
+              "body": "{\n  \"erro\": \"Prestador não encontrado.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar prestador",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Roberto Reparos\",\n  \"email\": \"roberto@sos.com\",\n  \"telefone\": \"31977770001\",\n  \"especialidade\": \"Vazamentos e Infiltrações\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/prestadores",
+              "host": ["{{base_url}}"],
+              "path": ["prestadores"]
+            },
+            "description": "Cadastra um novo prestador de serviços hidráulicos."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "originalRequest": {
+                "method": "POST",
+                "url": { "raw": "{{base_url}}/prestadores" }
+              },
+              "body": "{\n  \"mensagem\": \"Prestador cadastrado.\",\n  \"dados\": {\n    \"id\": 3,\n    \"nome\": \"Roberto Reparos\",\n    \"email\": \"roberto@sos.com\",\n    \"telefone\": \"31977770001\",\n    \"especialidade\": \"Vazamentos e Infiltrações\",\n    \"disponivel\": true\n  }\n}"
+            },
+            {
+              "name": "409 E-mail duplicado",
+              "status": "Conflict",
+              "code": 409,
+              "originalRequest": {
+                "method": "POST",
+                "url": { "raw": "{{base_url}}/prestadores" }
+              },
+              "body": "{\n  \"erro\": \"E-mail já cadastrado.\"\n}"
+            },
+            {
+              "name": "422 Dados inválidos",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "originalRequest": {
+                "method": "POST",
+                "url": { "raw": "{{base_url}}/prestadores" }
+              },
+              "body": "{\n  \"erro\": \"Dados inválidos.\",\n  \"detalhes\": [\n    { \"campo\": \"email\", \"mensagem\": \"email inválido.\" }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Solicitações",
+      "item": [
+        {
+          "name": "Criar solicitação",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario_id\": 1,\n  \"tipo_servico\": \"Desentupimento\",\n  \"descricao\": \"Pia da cozinha entupida há dois dias, água não escoa.\",\n  \"endereco\": \"Rua das Flores, 123 – Belo Horizonte/MG\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/solicitacoes",
+              "host": ["{{base_url}}"],
+              "path": ["solicitacoes"]
+            },
+            "description": "Cria uma nova solicitação de serviço hidráulico. Status inicial: PENDENTE."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "status": "Created",
+              "code": 201,
+              "originalRequest": {
+                "method": "POST",
+                "url": { "raw": "{{base_url}}/solicitacoes" }
+              },
+              "body": "{\n  \"mensagem\": \"Solicitação criada com sucesso.\",\n  \"dados\": {\n    \"id\": 1,\n    \"usuario_id\": 1,\n    \"prestador_id\": null,\n    \"tipo_servico\": \"Desentupimento\",\n    \"descricao\": \"Pia da cozinha entupida há dois dias, água não escoa.\",\n    \"endereco\": \"Rua das Flores, 123 – Belo Horizonte/MG\",\n    \"status\": \"PENDENTE\",\n    \"criado_em\": \"2026-05-11T21:00:00.000Z\",\n    \"atualizado_em\": \"2026-05-11T21:00:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "422 Dados inválidos",
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "originalRequest": {
+                "method": "POST",
+                "url": { "raw": "{{base_url}}/solicitacoes" }
+              },
+              "body": "{\n  \"erro\": \"Dados inválidos.\",\n  \"detalhes\": [\n    { \"campo\": \"descricao\", \"mensagem\": \"descricao deve ter pelo menos 10 caracteres.\" }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Listar solicitações",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/solicitacoes",
+              "host": ["{{base_url}}"],
+              "path": ["solicitacoes"]
+            },
+            "description": "Lista todas as solicitações. Suporta filtros via query string:\n- ?status=PENDENTE\n- ?usuario_id=1\n- ?prestador_id=2"
+          },
+          "response": [
+            {
+              "name": "200 OK – todas",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "GET",
+                "url": { "raw": "{{base_url}}/solicitacoes" }
+              },
+              "body": "{\n  \"total\": 1,\n  \"dados\": [\n    {\n      \"id\": 1,\n      \"tipo_servico\": \"Desentupimento\",\n      \"descricao\": \"Pia da cozinha entupida há dois dias.\",\n      \"endereco\": \"Rua das Flores, 123 – Belo Horizonte/MG\",\n      \"status\": \"PENDENTE\",\n      \"usuario_nome\": \"João Silva\",\n      \"usuario_telefone\": \"31999990001\",\n      \"prestador_nome\": null,\n      \"prestador_telefone\": null\n    }\n  ]\n}"
+            },
+            {
+              "name": "200 OK – filtro por status",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "GET",
+                "url": { "raw": "{{base_url}}/solicitacoes?status=PENDENTE" }
+              },
+              "body": "{\n  \"total\": 1,\n  \"dados\": [...]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Listar solicitações (filtro status)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/solicitacoes?status=PENDENTE",
+              "host": ["{{base_url}}"],
+              "path": ["solicitacoes"],
+              "query": [
+                { "key": "status", "value": "PENDENTE" }
+              ]
+            },
+            "description": "Filtra solicitações pelo status. Valores: PENDENTE, ACEITO, EM_ANDAMENTO, CONCLUIDO, RECUSADO."
+          },
+          "response": []
+        },
+        {
+          "name": "Listar solicitações (filtro usuario_id)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/solicitacoes?usuario_id=1",
+              "host": ["{{base_url}}"],
+              "path": ["solicitacoes"],
+              "query": [
+                { "key": "usuario_id", "value": "1" }
+              ]
+            },
+            "description": "Filtra solicitações de um cliente específico."
+          },
+          "response": []
+        },
+        {
+          "name": "Buscar solicitação por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/solicitacoes/1",
+              "host": ["{{base_url}}"],
+              "path": ["solicitacoes", "1"]
+            },
+            "description": "Retorna os detalhes completos de uma solicitação, incluindo dados do cliente e do prestador."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "GET",
+                "url": { "raw": "{{base_url}}/solicitacoes/1" }
+              },
+              "body": "{\n  \"dados\": {\n    \"id\": 1,\n    \"tipo_servico\": \"Desentupimento\",\n    \"descricao\": \"Pia da cozinha entupida há dois dias.\",\n    \"endereco\": \"Rua das Flores, 123 – Belo Horizonte/MG\",\n    \"status\": \"PENDENTE\",\n    \"criado_em\": \"2026-05-11T21:00:00.000Z\",\n    \"atualizado_em\": \"2026-05-11T21:00:00.000Z\",\n    \"usuario_nome\": \"João Silva\",\n    \"usuario_email\": \"joao@email.com\",\n    \"usuario_telefone\": \"31999990001\",\n    \"prestador_nome\": null,\n    \"prestador_email\": null,\n    \"prestador_telefone\": null,\n    \"prestador_especialidade\": null\n  }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "originalRequest": {
+                "method": "GET",
+                "url": { "raw": "{{base_url}}/solicitacoes/999" }
+              },
+              "body": "{\n  \"erro\": \"Solicitação não encontrada.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Atualizar status → ACEITO",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACEITO\",\n  \"prestador_id\": 1\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/solicitacoes/1/status",
+              "host": ["{{base_url}}"],
+              "path": ["solicitacoes", "1", "status"]
+            },
+            "description": "Prestador aceita a solicitação. Vincula o prestador_id à solicitação."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "originalRequest": {
+                "method": "PATCH",
+                "url": { "raw": "{{base_url}}/solicitacoes/1/status" }
+              },
+              "body": "{\n  \"mensagem\": \"Status atualizado para \\\"ACEITO\\\".\",\n  \"dados\": {\n    \"id\": 1,\n    \"status\": \"ACEITO\",\n    \"prestador_id\": 1,\n    \"atualizado_em\": \"2026-05-11T21:05:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Atualizar status → EM_ANDAMENTO",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"EM_ANDAMENTO\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/solicitacoes/1/status",
+              "host": ["{{base_url}}"],
+              "path": ["solicitacoes", "1", "status"]
+            },
+            "description": "Prestador inicia o atendimento."
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar status → CONCLUIDO",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CONCLUIDO\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/solicitacoes/1/status",
+              "host": ["{{base_url}}"],
+              "path": ["solicitacoes", "1", "status"]
+            },
+            "description": "Prestador conclui o serviço."
+          },
+          "response": []
+        },
+        {
+          "name": "Atualizar status → RECUSADO",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"RECUSADO\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/solicitacoes/1/status",
+              "host": ["{{base_url}}"],
+              "path": ["solicitacoes", "1", "status"]
+            },
+            "description": "Prestador recusa a solicitação."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
