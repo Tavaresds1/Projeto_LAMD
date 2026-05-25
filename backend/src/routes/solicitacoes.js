@@ -5,7 +5,6 @@ const { validar } = require('../middlewares/validacao');
 
 const router = Router();
 
-// Validações reutilizáveis
 const validarCriar = [
   body('usuario_id').isInt({ min: 1 }).withMessage('usuario_id deve ser um inteiro positivo.'),
   body('tipo_servico').notEmpty().withMessage('tipo_servico é obrigatório.'),
@@ -26,11 +25,6 @@ const validarStatus = [
     .withMessage('status inválido.'),
 ];
 
-// ── Endpoints ──────────────────────────────────────────────
-// POST   /solicitacoes          → cria nova solicitação
-// GET    /solicitacoes          → lista (com filtros opcionais)
-// GET    /solicitacoes/:id      → detalha uma solicitação
-// PATCH  /solicitacoes/:id/status → atualiza status
 
 router.post('/', validarCriar, validar, ctrl.criar);
 router.get('/', ctrl.listar);

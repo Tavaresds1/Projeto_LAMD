@@ -1,4 +1,5 @@
 const pool = require('../db/pool');
+const { publicar } = require('../mq/publisher');
 
 // POST /solicitacoes
 // Cria uma nova solicitação de serviço hidráulico
@@ -13,9 +14,19 @@ async function criar(req, res) {
       [usuario_id, tipo_servico, descricao, endereco]
     );
 
+    const nova = result.rows[0];
+    await publicar('solicitacao.criada', {
+      id: nova.id,
+      usuario_id: nova.usuario_id,
+      tipo_servico: nova.tipo_servico,
+      endereco: nova.endereco,
+      status: nova.status,
+      criado_em: nova.criado_em,
+    });
+
     return res.status(201).json({
       mensagem: 'Solicitação criada com sucesso.',
-      dados: result.rows[0],
+      dados: nova,
     });
   } catch (err) {
     console.error('[SOLICITACOES] Erro ao criar:', err.message);
@@ -138,9 +149,25 @@ async function atualizarStatus(req, res) {
       [status, prestador_id || null, id]
     );
 
+    const atualizada = result.rows[0];
+    await publicar('status.atualizado', {
+      id: atualizada.id,
+      status: atualizada.status,
+      prestador_id: atualizada.prestador_id,
+      atualizado_em: atualizada.atualizado_em,
+    });
+
+    if (status === 'ACEITO') {
+      await publicar('solicitacao.aceita', {
+        id: atualizada.id,
+        prestador_id: atualizada.prestador_id,
+        atualizado_em: atualizada.atualizado_em,
+      });
+    }
+
     return res.json({
       mensagem: `Status atualizado para "${status}".`,
-      dados: result.rows[0],
+      dados: atualizada,
     });
   } catch (err) {
     console.error('[SOLICITACOES] Erro ao atualizar status:', err.message);
