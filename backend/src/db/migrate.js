@@ -1,4 +1,5 @@
 const pool = require('./pool');
+const bcrypt = require('bcryptjs');
 
 async function migrate() {
   const client = await pool.connect();
@@ -12,8 +13,14 @@ async function migrate() {
         nome        VARCHAR(100) NOT NULL,
         email       VARCHAR(150) NOT NULL UNIQUE,
         telefone    VARCHAR(20),
+        senha_hash  VARCHAR(255),
         criado_em   TIMESTAMP DEFAULT NOW()
       );
+    `);
+
+    // Garante a coluna senha_hash em bancos criados antes da Sprint 3
+    await client.query(`
+      ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS senha_hash VARCHAR(255);
     `);
 
     // Tabela de prestadores de serviço
@@ -46,13 +53,17 @@ async function migrate() {
     `);
 
     // Seed: alguns registros de exemplo
-    await client.query(`
-      INSERT INTO usuarios (nome, email, telefone)
-      VALUES
-        ('João Silva', 'joao@email.com', '31999990001'),
-        ('Maria Souza', 'maria@email.com', '31999990002')
-      ON CONFLICT (email) DO NOTHING;
-    `);
+    // Senha padrão dos usuários de exemplo: "123456"
+    const senhaSeed = await bcrypt.hash('123456', 10);
+    await client.query(
+      `INSERT INTO usuarios (nome, email, telefone, senha_hash)
+       VALUES
+        ('João Silva', 'joao@email.com', '31999990001', $1),
+        ('Maria Souza', 'maria@email.com', '31999990002', $1)
+       ON CONFLICT (email) DO UPDATE
+         SET senha_hash = COALESCE(usuarios.senha_hash, EXCLUDED.senha_hash);`,
+      [senhaSeed]
+    );
 
     await client.query(`
       INSERT INTO prestadores (nome, email, telefone, especialidade)

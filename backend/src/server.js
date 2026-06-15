@@ -5,6 +5,7 @@ const migrate = require('./db/migrate');
 
 const solicitacoesRouter = require('./routes/solicitacoes');
 const prestadoresRouter  = require('./routes/prestadores');
+const usuariosRouter     = require('./routes/usuarios');
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.get('/health', (req, res) => {
 // ── Rotas ───────────────────────────────────────────────────
 app.use('/solicitacoes', solicitacoesRouter);
 app.use('/prestadores',  prestadoresRouter);
+app.use('/usuarios',     usuariosRouter);
 
 // ── 404 ─────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -48,6 +50,9 @@ migrate()
       console.log(`         GET    /prestadores`);
       console.log(`         GET    /prestadores/:id`);
       console.log(`         POST   /prestadores`);
+      console.log(`         POST   /usuarios/registrar`);
+      console.log(`         POST   /usuarios/login`);
+      console.log(`         GET    /usuarios/:id`);
     });
   })
   .catch((err) => {
