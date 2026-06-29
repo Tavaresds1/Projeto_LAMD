@@ -8,13 +8,10 @@ import '../services/api_client.dart';
 
 /// Provider das solicitações do usuário logado.
 ///
-/// Responsável por:
-/// - carregar a lista via repositório;
-/// - **atualização assíncrona de estado (Sprint 3)**: um [Timer] periódico
-///   refaz o GET em segundo plano, de modo que mudanças feitas pelo
-///   prestador (ex.: status PENDENTE → ACEITO) apareçam no app do cliente
-///   sem nenhuma ação manual;
-/// - criar novas solicitações.
+/// A lista completa é sempre buscada sem filtro de status.
+/// A filtragem é feita localmente via [itensFiltrados], o que permite
+/// trocar de aba instantaneamente sem nova requisição e garante que o
+/// polling sempre tenha a visão completa do estado atual.
 class SolicitacoesProvider extends ChangeNotifier {
   final SolicitacaoRepository _repo;
 
@@ -24,37 +21,62 @@ class SolicitacoesProvider extends ChangeNotifier {
   bool _carregando = false;
   bool _atualizando = false;
   String? _erro;
-  String? _filtroStatus;
+
+  // null  = "Ativas"  (PENDENTE + ACEITO + EM_ANDAMENTO)
+  // 'HISTORICO' = CONCLUIDO + RECUSADO
+  // qualquer outro valor = filtro exato por status
+  String? _filtroLocal;
+
   int? _usuarioId;
   Timer? _timer;
 
+  static const _statusAtivos = {'PENDENTE', 'ACEITO', 'EM_ANDAMENTO'};
+  static const _statusHistorico = {'CONCLUIDO', 'RECUSADO'};
+
   List<Solicitacao> get itens => List.unmodifiable(_itens);
+
+  List<Solicitacao> get itensFiltrados {
+    if (_filtroLocal == null) {
+      return _itens
+          .where((s) => _statusAtivos.contains(s.status))
+          .toList();
+    }
+    if (_filtroLocal == 'HISTORICO') {
+      return _itens
+          .where((s) => _statusHistorico.contains(s.status))
+          .toList();
+    }
+    return _itens.where((s) => s.status == _filtroLocal).toList();
+  }
+
   bool get carregando => _carregando;
   bool get atualizando => _atualizando;
   String? get erro => _erro;
-  String? get filtroStatus => _filtroStatus;
-  bool get vazio => !_carregando && _erro == null && _itens.isEmpty;
+  String? get filtroLocal => _filtroLocal;
+  bool get vazio => !_carregando && _erro == null && itensFiltrados.isEmpty;
 
-  /// Define o usuário cujas solicitações serão acompanhadas.
+  int get totalAtivas =>
+      _itens.where((s) => _statusAtivos.contains(s.status)).length;
+  int get totalHistorico =>
+      _itens.where((s) => _statusHistorico.contains(s.status)).length;
+
   void configurarUsuario(int usuarioId) {
     _usuarioId = usuarioId;
   }
 
-  void definirFiltro(String? status) {
-    if (_filtroStatus == status) return;
-    _filtroStatus = status;
+  void definirFiltro(String? filtro) {
+    if (_filtroLocal == filtro) return;
+    _filtroLocal = filtro;
     notifyListeners();
-    carregar();
   }
 
-  /// Carga inicial (com indicador de loading em tela cheia).
   Future<void> carregar() async {
     if (_usuarioId == null) return;
     _carregando = true;
     _erro = null;
     notifyListeners();
     try {
-      _itens = await _repo.listar(_usuarioId!, status: _filtroStatus);
+      _itens = await _repo.listar(_usuarioId!);
     } on ApiException catch (e) {
       _erro = e.mensagem;
     } catch (_) {
@@ -65,18 +87,13 @@ class SolicitacoesProvider extends ChangeNotifier {
     }
   }
 
-  /// Atualização silenciosa em segundo plano (usada pelo polling e pelo
-  /// pull-to-refresh). Não exibe loading de tela cheia e preserva a lista
-  /// atual em caso de falha momentânea de rede.
   Future<void> atualizarSilencioso() async {
     if (_usuarioId == null || _atualizando) return;
     _atualizando = true;
     notifyListeners();
     try {
-      final novos = await _repo.listar(_usuarioId!, status: _filtroStatus);
-      if (_mudou(novos)) {
-        _itens = novos;
-      }
+      final novos = await _repo.listar(_usuarioId!);
+      if (_mudou(novos)) _itens = novos;
       _erro = null;
     } catch (_) {
       // Silencioso: mantém os dados já exibidos.
@@ -86,7 +103,6 @@ class SolicitacoesProvider extends ChangeNotifier {
     }
   }
 
-  /// Inicia o polling periódico de atualização de estado.
   void iniciarPolling() {
     _timer?.cancel();
     _timer = Timer.periodic(
@@ -118,8 +134,6 @@ class SolicitacoesProvider extends ChangeNotifier {
     return nova;
   }
 
-  /// Compara a lista nova com a atual (por id + status + atualização)
-  /// para evitar reconstruções desnecessárias da UI.
   bool _mudou(List<Solicitacao> novos) {
     if (novos.length != _itens.length) return true;
     for (var i = 0; i < novos.length; i++) {

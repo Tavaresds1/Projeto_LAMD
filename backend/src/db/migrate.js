@@ -32,8 +32,14 @@ async function migrate() {
         telefone        VARCHAR(20),
         especialidade   VARCHAR(100) DEFAULT 'Hidráulica Geral',
         disponivel      BOOLEAN DEFAULT TRUE,
+        senha_hash      VARCHAR(255),
         criado_em       TIMESTAMP DEFAULT NOW()
       );
+    `);
+
+    // Garante a coluna senha_hash em bancos criados antes da Sprint 4
+    await client.query(`
+      ALTER TABLE prestadores ADD COLUMN IF NOT EXISTS senha_hash VARCHAR(255);
     `);
 
     // Tabela de solicitações de serviço
@@ -65,12 +71,34 @@ async function migrate() {
       [senhaSeed]
     );
 
+    // Senha padrão dos prestadores de exemplo: "123456"
+    await client.query(
+      `INSERT INTO prestadores (nome, email, telefone, especialidade, senha_hash)
+       VALUES
+        ('Carlos Encanador', 'carlos@sos.com', '31988880001', 'Desentupimento', $1),
+        ('Ana Hidráulica', 'ana@sos.com', '31988880002', 'Instalações Hidráulicas', $1)
+       ON CONFLICT (email) DO UPDATE
+         SET senha_hash = COALESCE(prestadores.senha_hash, EXCLUDED.senha_hash);`,
+      [senhaSeed]
+    );
+
+    // Colunas de custo do serviço (Sprint 4)
     await client.query(`
-      INSERT INTO prestadores (nome, email, telefone, especialidade)
-      VALUES
-        ('Carlos Encanador', 'carlos@sos.com', '31988880001', 'Desentupimento'),
-        ('Ana Hidráulica', 'ana@sos.com', '31988880002', 'Instalações Hidráulicas')
-      ON CONFLICT (email) DO NOTHING;
+      ALTER TABLE solicitacoes ADD COLUMN IF NOT EXISTS valor_mao_de_obra NUMERIC(10,2);
+    `);
+    await client.query(`
+      ALTER TABLE solicitacoes ADD COLUMN IF NOT EXISTS valor_pecas NUMERIC(10,2);
+    `);
+
+    // Tabela de recusas — rastreia quais prestadores recusaram cada solicitação
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS recusas (
+        id              SERIAL PRIMARY KEY,
+        solicitacao_id  INTEGER NOT NULL REFERENCES solicitacoes(id) ON DELETE CASCADE,
+        prestador_id    INTEGER NOT NULL REFERENCES prestadores(id),
+        recusado_em     TIMESTAMP DEFAULT NOW(),
+        UNIQUE(solicitacao_id, prestador_id)
+      );
     `);
 
     await client.query('COMMIT');

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/theme/app_theme.dart';
 import '../core/utils/status_helper.dart';
 import '../providers/auth_provider.dart';
 import '../providers/solicitacoes_provider.dart';
@@ -10,11 +11,6 @@ import 'detalhe_screen.dart';
 import 'login_screen.dart';
 import 'nova_solicitacao_screen.dart';
 
-/// Tela principal (Home): lista as solicitações do usuário logado.
-///
-/// Implementa a **atualização assíncrona de estado (Sprint 3)** iniciando o
-/// polling do provider ao entrar e pausando-o quando o app vai para segundo
-/// plano, refletindo automaticamente mudanças feitas pelo prestador.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -23,12 +19,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  // null = Ativas | 'HISTORICO' = Histórico | string = status exato
   static const _filtros = <String, String?>{
-    'Todas': null,
+    'Ativas': null,
     'Pendente': 'PENDENTE',
     'Aceito': 'ACEITO',
     'Em andamento': 'EM_ANDAMENTO',
-    'Concluído': 'CONCLUIDO',
+    'Histórico': 'HISTORICO',
   };
 
   @override
@@ -65,8 +62,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _sair() async {
-    final prov = context.read<SolicitacoesProvider>();
-    prov.pararPolling();
+    context.read<SolicitacoesProvider>().pararPolling();
     await context.read<AuthProvider>().logout();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
@@ -81,47 +77,49 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final prov = context.watch<SolicitacoesProvider>();
 
     return Scaffold(
+      backgroundColor: AppTheme.fundo,
       appBar: AppBar(
-        title: const Text('Minhas Solicitações'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: AppTheme.primaria,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.plumbing, size: 18, color: Colors.white),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'SOS Reparos',
+              style: TextStyle(
+                color: AppTheme.primaria,
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ],
+        ),
         actions: [
-          // Indicador discreto de atualização em segundo plano (polling).
           if (prov.atualizando)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Center(
                 child: SizedBox(
-                  height: 18,
-                  width: 18,
+                  height: 16,
+                  width: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: AppTheme.primaria.withOpacity(0.6),
                   ),
                 ),
               ),
             ),
-          PopupMenuButton<String>(
-            onSelected: (v) {
-              if (v == 'sair') _sair();
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                enabled: false,
-                child: Text(
-                  auth.usuario?.nome ?? '',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'sair',
-                child: ListTile(
-                  leading: Icon(Icons.logout),
-                  title: Text('Sair'),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ],
-          ),
+          _MenuUsuario(nome: auth.usuario?.nome ?? '', onSair: _sair),
+          const SizedBox(width: 4),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -132,13 +130,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (mounted) context.read<SolicitacoesProvider>().carregar();
         },
         icon: const Icon(Icons.add),
-        label: const Text('Nova solicitação'),
+        label: const Text(
+          'Nova solicitação',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _BannerResumo(prov: prov),
           _BarraFiltros(
             filtros: _filtros,
-            selecionado: prov.filtroStatus,
+            selecionado: prov.filtroLocal,
             onSelecionar: prov.definirFiltro,
           ),
           Expanded(child: _corpo(prov)),
@@ -149,13 +152,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _corpo(SolicitacoesProvider prov) {
     if (prov.carregando) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(color: AppTheme.primaria),
+      );
     }
 
     if (prov.erro != null && prov.itens.isEmpty) {
       return EmptyState(
-        icone: Icons.cloud_off,
-        titulo: 'Não foi possível carregar',
+        icone: Icons.cloud_off_outlined,
+        titulo: 'Sem conexão',
         mensagem: prov.erro,
         rotuloAcao: 'Tentar novamente',
         aoTocarAcao: prov.carregar,
@@ -163,23 +168,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     if (prov.vazio) {
-      return EmptyState(
-        icone: Icons.inbox_outlined,
-        titulo: 'Nenhuma solicitação',
-        mensagem: prov.filtroStatus == null
-            ? 'Toque em "Nova solicitação" para pedir um serviço.'
-            : 'Nenhuma solicitação com status "'
-                '${StatusHelper.rotulo(prov.filtroStatus!)}".',
-      );
+      return _emptyStatePorFiltro(prov);
     }
 
     return RefreshIndicator(
+      color: AppTheme.primaria,
       onRefresh: prov.atualizarSilencioso,
       child: ListView.builder(
-        padding: const EdgeInsets.only(top: 8, bottom: 88),
-        itemCount: prov.itens.length,
+        padding: const EdgeInsets.only(top: 8, bottom: 100),
+        itemCount: prov.itensFiltrados.length,
         itemBuilder: (_, i) {
-          final s = prov.itens[i];
+          final s = prov.itensFiltrados[i];
           return SolicitacaoCard(
             solicitacao: s,
             onTap: () => Navigator.of(context).push(
@@ -188,6 +187,214 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           );
         },
       ),
+    );
+  }
+
+  Widget _emptyStatePorFiltro(SolicitacoesProvider prov) {
+    if (prov.filtroLocal == 'HISTORICO') {
+      return const EmptyState(
+        icone: Icons.history,
+        titulo: 'Sem histórico',
+        mensagem: 'Seus serviços concluídos e recusados aparecerão aqui.',
+      );
+    }
+    if (prov.filtroLocal == null && prov.totalHistorico > 0) {
+      return EmptyState(
+        icone: Icons.check_circle_outline,
+        titulo: 'Nenhuma solicitação ativa',
+        mensagem:
+            'Você tem ${prov.totalHistorico} serviço${prov.totalHistorico > 1 ? 's' : ''} '
+            'no Histórico.\nToque em "Nova solicitação" para pedir um novo serviço.',
+      );
+    }
+    if (prov.filtroLocal == null) {
+      return const EmptyState(
+        icone: Icons.inbox_outlined,
+        titulo: 'Nenhuma solicitação',
+        mensagem: 'Toque em "Nova solicitação" para pedir um serviço.',
+      );
+    }
+    return EmptyState(
+      icone: Icons.inbox_outlined,
+      titulo: 'Nenhuma solicitação',
+      mensagem: 'Nenhuma solicitação com status '
+          '"${StatusHelper.rotulo(prov.filtroLocal!)}".',
+    );
+  }
+}
+
+class _BannerResumo extends StatelessWidget {
+  final SolicitacoesProvider prov;
+  const _BannerResumo({required this.prov});
+
+  @override
+  Widget build(BuildContext context) {
+    if (prov.carregando || prov.itens.isEmpty) return const SizedBox.shrink();
+
+    final pendentes =
+        prov.itens.where((s) => s.status == 'PENDENTE').length;
+    final emAndamento =
+        prov.itens.where((s) => s.status == 'EM_ANDAMENTO').length;
+    final aceitos =
+        prov.itens.where((s) => s.status == 'ACEITO').length;
+
+    if (pendentes == 0 && emAndamento == 0 && aceitos == 0) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.superficie,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFEEEEEE)),
+      ),
+      child: Row(
+        children: [
+          if (pendentes > 0)
+            _ContadorItem(
+              count: pendentes,
+              rotulo: 'Aguardando',
+              cor: const Color(0xFFF9A825),
+            ),
+          if (pendentes > 0 && (aceitos > 0 || emAndamento > 0))
+            const _Divisor(),
+          if (aceitos > 0)
+            _ContadorItem(
+              count: aceitos,
+              rotulo: 'Aceito',
+              cor: const Color(0xFF1E88E5),
+            ),
+          if (aceitos > 0 && emAndamento > 0) const _Divisor(),
+          if (emAndamento > 0)
+            _ContadorItem(
+              count: emAndamento,
+              rotulo: 'Em andamento',
+              cor: const Color(0xFF6A1B9A),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ContadorItem extends StatelessWidget {
+  final int count;
+  final String rotulo;
+  final Color cor;
+
+  const _ContadorItem({
+    required this.count,
+    required this.rotulo,
+    required this.cor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: cor,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            rotulo,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppTheme.textoSecundario,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Divisor extends StatelessWidget {
+  const _Divisor();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 32,
+      width: 1,
+      color: const Color(0xFFEEEEEE),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+    );
+  }
+}
+
+class _MenuUsuario extends StatelessWidget {
+  final String nome;
+  final VoidCallback onSair;
+
+  const _MenuUsuario({required this.nome, required this.onSair});
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      onSelected: (v) {
+        if (v == 'sair') onSair();
+      },
+      offset: const Offset(0, 48),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        child: CircleAvatar(
+          radius: 18,
+          backgroundColor: AppTheme.primariaClara,
+          child: Text(
+            nome.isNotEmpty ? nome[0].toUpperCase() : '?',
+            style: const TextStyle(
+              color: AppTheme.primaria,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+            ),
+          ),
+        ),
+      ),
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          enabled: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                nome,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF212121),
+                ),
+              ),
+              const Text(
+                'Cliente',
+                style: TextStyle(fontSize: 12, color: AppTheme.textoSecundario),
+              ),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: 'sair',
+          child: Row(
+            children: const [
+              Icon(Icons.logout, size: 18, color: AppTheme.primaria),
+              SizedBox(width: 12),
+              Text('Sair', style: TextStyle(color: AppTheme.primaria)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -209,15 +416,35 @@ class _BarraFiltros extends StatelessWidget {
       height: 56,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         children: filtros.entries.map((e) {
           final ativo = selecionado == e.value;
+          final isHistorico = e.value == 'HISTORICO';
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
               label: Text(e.key),
               selected: ativo,
               onSelected: (_) => onSelecionar(e.value),
+              selectedColor: isHistorico && ativo
+                  ? const Color(0xFF424242)
+                  : AppTheme.primaria,
+              backgroundColor: AppTheme.superficie,
+              side: BorderSide(
+                color: ativo
+                    ? (isHistorico
+                        ? const Color(0xFF424242)
+                        : AppTheme.primaria)
+                    : const Color(0xFFE0E0E0),
+              ),
+              labelStyle: TextStyle(
+                color: ativo ? Colors.white : const Color(0xFF424242),
+                fontWeight: ativo ? FontWeight.w700 : FontWeight.w500,
+                fontSize: 13,
+              ),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              showCheckmark: false,
             ),
           );
         }).toList(),

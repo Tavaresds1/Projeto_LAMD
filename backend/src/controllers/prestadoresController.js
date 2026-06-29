@@ -1,4 +1,5 @@
 const pool = require('../db/pool');
+const bcrypt = require('bcryptjs');
 
 // GET /prestadores
 async function listar(req, res) {
@@ -52,4 +53,31 @@ async function criar(req, res) {
   }
 }
 
-module.exports = { listar, buscarPorId, criar };
+// POST /prestadores/login
+async function login(req, res) {
+  const { email, senha } = req.body;
+  try {
+    const result = await pool.query(
+      'SELECT * FROM prestadores WHERE email = $1',
+      [email]
+    );
+    if (result.rowCount === 0) {
+      return res.status(401).json({ erro: 'E-mail ou senha inválidos.' });
+    }
+    const prestador = result.rows[0];
+    if (!prestador.senha_hash) {
+      return res.status(401).json({ erro: 'Conta sem senha configurada.' });
+    }
+    const ok = await bcrypt.compare(senha, prestador.senha_hash);
+    if (!ok) {
+      return res.status(401).json({ erro: 'E-mail ou senha inválidos.' });
+    }
+    const { senha_hash, ...dados } = prestador;
+    return res.json({ mensagem: 'Login realizado.', dados });
+  } catch (err) {
+    console.error('[PRESTADORES] Erro ao fazer login:', err.message);
+    return res.status(500).json({ erro: 'Erro interno ao autenticar.' });
+  }
+}
+
+module.exports = { listar, buscarPorId, criar, login };

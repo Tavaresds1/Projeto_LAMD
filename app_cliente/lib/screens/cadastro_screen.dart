@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import 'home_screen.dart';
 
-/// Tela de cadastro de novo usuário cliente.
 class CadastroScreen extends StatefulWidget {
   const CadastroScreen({super.key});
 
@@ -49,7 +49,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(auth.erro ?? 'Falha ao cadastrar.'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: AppTheme.primariaEscura,
         ),
       );
     }
@@ -60,7 +60,15 @@ class _CadastroScreenState extends State<CadastroScreen> {
     final processando = context.watch<AuthProvider>().processando;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Criar conta')),
+      backgroundColor: AppTheme.fundo,
+      appBar: AppBar(
+        title: const Text('Criar conta'),
+        backgroundColor: AppTheme.superficie,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -69,6 +77,8 @@ class _CadastroScreenState extends State<CadastroScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const _SecaoHeader(),
+                const SizedBox(height: 28),
                 TextFormField(
                   controller: _nomeCtrl,
                   textCapitalization: TextCapitalization.words,
@@ -80,7 +90,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                       ? 'Informe seu nome.'
                       : null,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
@@ -96,7 +106,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _telefoneCtrl,
                   keyboardType: TextInputType.phone,
@@ -106,7 +116,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                     hintText: 'Ex.: 31999990000',
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _senhaCtrl,
                   obscureText: _ocultarSenha,
@@ -129,7 +139,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
                 ElevatedButton(
                   onPressed: processando ? null : _cadastrar,
                   child: processando
@@ -137,17 +147,59 @@ class _CadastroScreenState extends State<CadastroScreen> {
                           height: 22,
                           width: 22,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2,
+                            strokeWidth: 2.5,
                             color: Colors.white,
                           ),
                         )
-                      : const Text('Cadastrar'),
+                      : const Text('Criar conta'),
                 ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SecaoHeader extends StatelessWidget {
+  const _SecaoHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: AppTheme.primariaClara,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Icon(
+            Icons.person_add_outlined,
+            color: AppTheme.primaria,
+            size: 28,
+          ),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Crie sua conta',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF212121),
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Preencha os dados para se cadastrar',
+          style: TextStyle(
+              color: AppTheme.textoSecundario, fontSize: 14),
+        ),
+      ],
     );
   }
 }

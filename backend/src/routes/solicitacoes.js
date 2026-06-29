@@ -30,5 +30,13 @@ router.post('/', validarCriar, validar, ctrl.criar);
 router.get('/', ctrl.listar);
 router.get('/:id', validarId, validar, ctrl.buscarPorId);
 router.patch('/:id/status', validarStatus, validar, ctrl.atualizarStatus);
+router.post('/:id/recusar',
+  [
+    param('id').isInt({ min: 1 }).withMessage('ID deve ser um inteiro positivo.'),
+    body('prestador_id').isInt({ min: 1 }).withMessage('prestador_id é obrigatório.'),
+  ],
+  validar,
+  ctrl.recusar
+);
 
 module.exports = router;

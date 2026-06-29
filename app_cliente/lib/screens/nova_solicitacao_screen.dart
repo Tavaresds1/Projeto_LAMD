@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/theme/app_theme.dart';
 import '../providers/solicitacoes_provider.dart';
 import '../services/api_client.dart';
 
-/// Tela de ação principal: criação de uma nova solicitação de serviço.
 class NovaSolicitacaoScreen extends StatefulWidget {
   const NovaSolicitacaoScreen({super.key});
 
@@ -23,9 +23,20 @@ class _NovaSolicitacaoScreenState extends State<NovaSolicitacaoScreen> {
     'Instalação Hidráulica',
     'Reparo de Torneira',
     'Troca de Registro',
-    'Manutenção de Caixa d\'água',
+    "Manutenção de Caixa d'água",
     'Outro',
   ];
+
+  static const _iconesTipo = <String, IconData>{
+    'Vazamento': Icons.water_drop_outlined,
+    'Desentupimento': Icons.plumbing,
+    'Instalação Hidráulica': Icons.settings_outlined,
+    'Reparo de Torneira': Icons.hardware_outlined,
+    'Troca de Registro': Icons.rotate_right_outlined,
+    "Manutenção de Caixa d'água": Icons.water_outlined,
+    'Outro': Icons.handyman_outlined,
+  };
+
   String _tipoSelecionado = _tiposServico.first;
   bool _enviando = false;
 
@@ -49,9 +60,15 @@ class _NovaSolicitacaoScreenState extends State<NovaSolicitacaoScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Solicitação criada com sucesso!'),
-          backgroundColor: Color(0xFF2E7D32),
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Text('Solicitação criada com sucesso!'),
+            ],
+          ),
+          backgroundColor: const Color(0xFF2E7D32),
         ),
       );
       Navigator.of(context).pop();
@@ -67,14 +84,24 @@ class _NovaSolicitacaoScreenState extends State<NovaSolicitacaoScreen> {
   void _falha(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red.shade700),
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: AppTheme.primariaEscura,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Nova solicitação')),
+      backgroundColor: AppTheme.fundo,
+      appBar: AppBar(
+        title: const Text('Nova solicitação'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -83,36 +110,33 @@ class _NovaSolicitacaoScreenState extends State<NovaSolicitacaoScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Descreva o serviço hidráulico que você precisa.',
-                  style: TextStyle(color: Colors.black54),
+                _InfoBanner(),
+                const SizedBox(height: 24),
+                _SecaoLabel(
+                  icone: Icons.category_outlined,
+                  titulo: 'Tipo de serviço',
+                ),
+                const SizedBox(height: 10),
+                _SeletorTipo(
+                  tipos: _tiposServico,
+                  icones: _iconesTipo,
+                  selecionado: _tipoSelecionado,
+                  onSelecionar: (v) =>
+                      setState(() => _tipoSelecionado = v),
                 ),
                 const SizedBox(height: 20),
-                DropdownButtonFormField<String>(
-                  value: _tipoSelecionado,
-                  decoration: const InputDecoration(
-                    labelText: 'Tipo de serviço',
-                    prefixIcon: Icon(Icons.handyman_outlined),
-                  ),
-                  items: _tiposServico
-                      .map((t) =>
-                          DropdownMenuItem(value: t, child: Text(t)))
-                      .toList(),
-                  onChanged: (v) =>
-                      setState(() => _tipoSelecionado = v ?? _tiposServico.first),
+                _SecaoLabel(
+                  icone: Icons.description_outlined,
+                  titulo: 'Descrição do problema',
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
                 TextFormField(
                   controller: _descricaoCtrl,
                   maxLines: 4,
                   decoration: const InputDecoration(
-                    labelText: 'Descrição',
+                    hintText:
+                        'Ex.: Vazamento embaixo da pia da cozinha, água escorrendo pelo armário...',
                     alignLabelWithHint: true,
-                    hintText: 'Ex.: Vazamento embaixo da pia da cozinha...',
-                    prefixIcon: Padding(
-                      padding: EdgeInsets.only(bottom: 60),
-                      child: Icon(Icons.description_outlined),
-                    ),
                   ),
                   validator: (v) {
                     if (v == null || v.trim().length < 10) {
@@ -121,11 +145,15 @@ class _NovaSolicitacaoScreenState extends State<NovaSolicitacaoScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+                _SecaoLabel(
+                  icone: Icons.place_outlined,
+                  titulo: 'Endereço',
+                ),
+                const SizedBox(height: 10),
                 TextFormField(
                   controller: _enderecoCtrl,
                   decoration: const InputDecoration(
-                    labelText: 'Endereço',
                     hintText: 'Rua, número, bairro',
                     prefixIcon: Icon(Icons.place_outlined),
                   ),
@@ -133,7 +161,7 @@ class _NovaSolicitacaoScreenState extends State<NovaSolicitacaoScreen> {
                       ? 'Informe o endereço.'
                       : null,
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 32),
                 ElevatedButton.icon(
                   onPressed: _enviando ? null : _enviar,
                   icon: _enviando
@@ -141,18 +169,139 @@ class _NovaSolicitacaoScreenState extends State<NovaSolicitacaoScreen> {
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2,
+                            strokeWidth: 2.5,
                             color: Colors.white,
                           ),
                         )
-                      : const Icon(Icons.send),
-                  label: Text(_enviando ? 'Enviando...' : 'Solicitar serviço'),
+                      : const Icon(Icons.send_outlined, size: 20),
+                  label:
+                      Text(_enviando ? 'Enviando...' : 'Solicitar serviço'),
                 ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _InfoBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.primariaClara,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppTheme.primaria.withOpacity(0.2),
+        ),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.info_outline, color: AppTheme.primaria, size: 20),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Descreva o serviço hidráulico que você precisa com o máximo de detalhes.',
+              style: TextStyle(
+                color: AppTheme.primariaEscura,
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SecaoLabel extends StatelessWidget {
+  final IconData icone;
+  final String titulo;
+
+  const _SecaoLabel({required this.icone, required this.titulo});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icone, size: 18, color: AppTheme.primaria),
+        const SizedBox(width: 8),
+        Text(
+          titulo,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF212121),
+            letterSpacing: 0.1,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SeletorTipo extends StatelessWidget {
+  final List<String> tipos;
+  final Map<String, IconData> icones;
+  final String selecionado;
+  final ValueChanged<String> onSelecionar;
+
+  const _SeletorTipo({
+    required this.tipos,
+    required this.icones,
+    required this.selecionado,
+    required this.onSelecionar,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: tipos.map((t) {
+        final ativo = t == selecionado;
+        return GestureDetector(
+          onTap: () => onSelecionar(t),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: ativo ? AppTheme.primaria : AppTheme.superficie,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: ativo
+                    ? AppTheme.primaria
+                    : const Color(0xFFE0E0E0),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icones[t] ?? Icons.handyman_outlined,
+                  size: 16,
+                  color: ativo ? Colors.white : AppTheme.textoSecundario,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  t,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: ativo ? Colors.white : const Color(0xFF424242),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
